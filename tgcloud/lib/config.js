@@ -11,7 +11,7 @@ export const OWNER_IDS = envList('OWNER_IDS') || [
 
 // Адрес мини-аппа. `npx tgcloud push` печатает его: https://app<ID>.tgcloud.ai/
 // Если оставить пустым — можно задать позже в боте: Админка → Настройки → URL мини-аппа.
-export const APP_URL = globalThis.process?.env?.APP_URL || 'https://app8890173985.tgcloud.ai/';
+export const APP_URL = globalThis.process?.env?.APP_URL || 'https://premgodkmbp.webtm.ru';
 
 // Название премии и даты.
 export const AWARD_NAME = 'Премия года КМБП';
