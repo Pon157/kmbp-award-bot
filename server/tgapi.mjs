@@ -1,7 +1,10 @@
 // Клиент Bot API: любой метод — api.method({...}). Прокси (TG_PROXY) и зеркало API (TG_API_BASE) — для регионов, где Telegram недоступен.
-import { fetch, request, FormData, ProxyAgent } from 'undici';
+import { fetch as undiciFetch, request, FormData, ProxyAgent } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
 import { BotApiError, InputFile } from './types.mjs';
+
+// Явно используем fetch из undici, а не глобальный fetch Node.js.
+const fetch = undiciFetch;
 
 // http(s)://[user:pass@]host:port — через HTTP CONNECT; socks4://, socks5://, socks5h:// [user:pass@]host:port — через SOCKS.
 export function makeDispatcher(proxy) {
@@ -32,7 +35,10 @@ export function createApi({ token, base = 'https://api.telegram.org', proxy } = 
   async function call(method, params = {}) {
     const url = `${base}/bot${token}/${method}`;
     let init;
+    let isForm = false;
+
     if (Object.values(params).some((v) => v instanceof InputFile)) {
+      isForm = true;
       const form = new FormData();
       for (const [k, v] of Object.entries(params)) {
         if (v === undefined || v === null) continue;
@@ -40,28 +46,35 @@ export function createApi({ token, base = 'https://api.telegram.org', proxy } = 
         else form.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
       }
       init = { method: 'POST', body: form };
-    } else init = { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(params) };
+    } else {
+      init = { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(params) };
+    }
+
     const wait = method === 'getUpdates' ? (Number(params.timeout) || 0) * 1000 + 20000 : 60000;
 
     try {
       let status, json;
+
       if (dispatcher && isSocksDispatcher(dispatcher)) {
-        // SOCKS-прокси: используем undici.request, который корректно работает с socksDispatcher
-        const { statusCode, body } = await request(url, {
+        // SOCKS-прокси: undici.request корректно работает с socksDispatcher
+        const reqInit = {
           method: init.method,
           headers: init.headers,
           body: init.body,
           dispatcher,
           signal: AbortSignal.timeout(wait),
-        });
+        };
+        // Если body — FormData, undici.request поддерживает его напрямую
+        const { statusCode, body } = await request(url, reqInit);
         status = statusCode;
         json = await body.json();
       } else {
-        // Без прокси или с HTTP-прокси: используем undici.fetch
+        // Без прокси или HTTP-прокси: undici.fetch
         const res = await fetch(url, { ...init, dispatcher, signal: AbortSignal.timeout(wait) });
         status = res.status;
         try { json = await res.json(); } catch (e) { throw new BotApiError(status, `bad response (HTTP ${status})`, method); }
       }
+
       if (!json.ok) throw new BotApiError(json.error_code || status, json.description || 'error', method, json.parameters);
       return json.result;
     } catch (e) {
