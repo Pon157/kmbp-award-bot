@@ -45,7 +45,7 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
       const hasHash = !!rawInit && /(^|&)hash=/.test(String(rawInit));
       const ad = rawInit ? Number(new URLSearchParams(String(rawInit)).get('auth_date')) : 0;
       const age = ad ? Math.round(Date.now() / 1000 - ad) : null;
-      log('warn', `AUTH ${name}: initData отклонён — заголовок ${rawInit ? 'есть (' + String(rawInit).length + ' симв.)' : 'ОТСУТСТВУЕТ'}, hash ${hasHash ? 'есть' : 'нет'}, возраст auth_date ${age ?? '—'} c, bot_id=${String(token).split(':')[0]}`);
+      log('warn', `AUTH ${name}: initData отклонён — заголовок ${rawInit === undefined ? 'НЕ ПЕРЕДАН' : rawInit === '' ? 'ПУСТОЙ (initData пуст на клиенте)' : 'есть (' + String(rawInit).length + ' симв.)'}, hash ${hasHash ? 'есть' : 'нет'}, возраст auth_date ${age ?? '—'} c, bot_id=${String(token).split(':')[0]}`);
       return json(res, 401, { ok: false, description: 'Откройте мини-апп из Telegram', parameters: { code: 'AUTH' } }); }
     const fn = await loadEndpoint(name);
     if (!fn) return json(res, 404, { ok: false, description: 'Not found' });
