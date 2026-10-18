@@ -7,6 +7,7 @@ export function loadEnv(file) {
     if (!m || line.trim().startsWith('#')) continue;
     let v = m[2];
     if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+    else v = v.replace(/\s+#.*$/, '').trim();   // обрезаем комментарий в конце строки: KEY=value  # комментарий
     if (process.env[m[1]] === undefined) process.env[m[1]] = v;
   }
   return true;
