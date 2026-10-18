@@ -17,6 +17,9 @@ const fatal = (m) => { log('error', m); process.exit(1); };
 if (!env.BOT_TOKEN) fatal('Не задан BOT_TOKEN (токен бота от @BotFather). Скопируйте .env.example в .env и заполните.');
 if (!env.APP_URL) log('warn', 'Не задан APP_URL (https-адрес этого сервера): кнопки «Открыть премию» не будут работать.');
 
+env.BOT_TOKEN = String(env.BOT_TOKEN).trim().replace(/^bot(?=\d+:)/i, '');
+if (!/^\d{5,}:[A-Za-z0-9_-]{30,}$/.test(env.BOT_TOKEN)) fatal('BOT_TOKEN имеет неверный формат (ожидается 123456789:AAxxxxxxxx…, без кавычек, пробелов, слова «bot» и комментариев). Скопируйте токен заново из @BotFather.');
+
 const sdk = await import('./sdk.mjs');
 const dbPath = path.resolve(env.DB_PATH || path.join(ROOT, 'data', 'bot.sqlite'));
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -39,7 +42,7 @@ try {
   const me = await sdk.api.getMe();
   log('info', `Бот: @${me.username}`); await S.setSetting('bot_username', me.username);
 } catch (e) {
-  if (e.code === 401) fatal('Telegram отверг BOT_TOKEN (401): проверьте токен.');
+  if (e.code === 401 || e.code === 404) fatal(`Telegram ответил ${e.code} (${e.message}) — BOT_TOKEN неверный или отозван${env.TG_API_BASE ? ', либо TG_API_BASE указывает не на Bot API' : ''}. Проверьте токен в @BotFather.`);
   log('warn', `Не удалось связаться с Telegram (${e.message}). Проверьте TG_PROXY / сеть — продолжаю и буду повторять.`);
 }
 
