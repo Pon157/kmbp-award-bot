@@ -1,5 +1,5 @@
 // Клиент Bot API: любой метод — api.method({...}). Прокси (TG_PROXY) и зеркало API (TG_API_BASE) — для регионов, где Telegram недоступен.
-import { fetch, FormData, ProxyAgent } from 'undici';
+import { fetch, request, FormData, ProxyAgent } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
 import { BotApiError, InputFile } from './types.mjs';
 
@@ -17,6 +17,10 @@ export function makeDispatcher(proxy) {
     });
   }
   throw new Error(`TG_PROXY: схема «${proto}» не поддерживается (нужны http, https, socks4, socks5)`);
+}
+
+function isSocksDispatcher(d) {
+  return d && d.constructor && d.constructor.name === 'SocksDispatcher';
 }
 
 export function createApi({ token, base = 'https://api.telegram.org', proxy } = {}) {
@@ -38,23 +42,52 @@ export function createApi({ token, base = 'https://api.telegram.org', proxy } = 
       init = { method: 'POST', body: form };
     } else init = { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(params) };
     const wait = method === 'getUpdates' ? (Number(params.timeout) || 0) * 1000 + 20000 : 60000;
-    let res;
-    try { res = await fetch(url, { ...init, dispatcher, signal: AbortSignal.timeout(wait) }); }
-    catch (e) { throw new BotApiError(0, clean('network: ' + (e.cause?.message || e.message)), method); }
-    let j;
-    try { j = await res.json(); } catch (e) { throw new BotApiError(res.status, `bad response (HTTP ${res.status})`, method); }
-    if (!j.ok) throw new BotApiError(j.error_code || res.status, j.description || 'error', method, j.parameters);
-    return j.result;
+
+    try {
+      let status, json;
+      if (dispatcher && isSocksDispatcher(dispatcher)) {
+        // SOCKS-прокси: используем undici.request, который корректно работает с socksDispatcher
+        const { statusCode, body } = await request(url, {
+          method: init.method,
+          headers: init.headers,
+          body: init.body,
+          dispatcher,
+          signal: AbortSignal.timeout(wait),
+        });
+        status = statusCode;
+        json = await body.json();
+      } else {
+        // Без прокси или с HTTP-прокси: используем undici.fetch
+        const res = await fetch(url, { ...init, dispatcher, signal: AbortSignal.timeout(wait) });
+        status = res.status;
+        try { json = await res.json(); } catch (e) { throw new BotApiError(status, `bad response (HTTP ${status})`, method); }
+      }
+      if (!json.ok) throw new BotApiError(json.error_code || status, json.description || 'error', method, json.parameters);
+      return json.result;
+    } catch (e) {
+      if (e instanceof BotApiError) throw e;
+      throw new BotApiError(0, clean('network: ' + (e.cause?.message || e.message)), method);
+    }
   }
 
   // Скачать файл по file_id (платформенный api.getFileContent).
   async function fileContent(fileId) {
     const f = await call('getFile', { file_id: fileId });
-    let res;
-    try { res = await fetch(`${base}/file/bot${token}/${f.file_path}`, { dispatcher, signal: AbortSignal.timeout(120000) }); }
-    catch (e) { throw new BotApiError(0, clean('network: ' + (e.cause?.message || e.message)), 'getFile'); }
-    if (!res.ok) throw new BotApiError(res.status, 'file download failed', 'getFile');
-    return new Uint8Array(await res.arrayBuffer());
+    const url = `${base}/file/bot${token}/${f.file_path}`;
+    try {
+      if (dispatcher && isSocksDispatcher(dispatcher)) {
+        const { statusCode, body } = await request(url, { dispatcher, signal: AbortSignal.timeout(120000) });
+        if (statusCode < 200 || statusCode >= 300) throw new BotApiError(statusCode, 'file download failed', 'getFile');
+        return new Uint8Array(await body.arrayBuffer());
+      }
+      const res = await fetch(url, { dispatcher, signal: AbortSignal.timeout(120000) });
+      if (!res.ok) throw new BotApiError(res.status, 'file download failed', 'getFile');
+      return new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      if (e instanceof BotApiError) throw e;
+      throw new BotApiError(0, clean('network: ' + (e.cause?.message || e.message)), 'getFile');
+    }
   }
+
   return { call, fileContent };
 }
