@@ -51,6 +51,10 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
       const hasHash = !!rawInit && /(^|&)hash=/.test(String(rawInit));
       const ad = rawInit ? Number(new URLSearchParams(String(rawInit)).get('auth_date')) : 0;
       const age = ad ? Math.round(Date.now() / 1000 - ad) : null;
+      // что реально пришло: имена заголовков, ключи тела, начало User-Agent
+      const hdrNames = Object.keys(req.headers).filter((h) => !/^(cookie|authorization)$/i.test(h)).join(',');
+      const bodyKeys = (() => { try { return Object.keys(JSON.parse(bodyText || '{}')).join(',') || '(пусто)'; } catch (e) { return '(не JSON, ' + (bodyText || '').length + ' байт)'; } })();
+      log('warn', `AUTH ${name}: заголовки=[${hdrNames}] ключи_тела=[${bodyKeys}] UA=${String(req.headers['user-agent'] || '').slice(0, 60)}`);
       log('warn', `AUTH ${name}: initData отклонён — заголовок ${rawInit === undefined ? 'НЕ ПЕРЕДАН' : rawInit === '' ? 'ПУСТОЙ (initData пуст на клиенте)' : 'есть (' + String(rawInit).length + ' симв.)'}, hash ${hasHash ? 'есть' : 'нет'}, возраст auth_date ${age ?? '—'} c, bot_id=${String(token).split(':')[0]}`);
       return json(res, 401, { ok: false, description: 'Откройте мини-апп из Telegram', parameters: { code: 'AUTH' } }); }
     const fn = await loadEndpoint(name);
