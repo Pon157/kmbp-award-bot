@@ -38,7 +38,13 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
   });
 
   async function callEndpoint(req, res, name) {
-    const rawInit = req.headers['x-init-data'];
+    // initData ищем в заголовке X-Init-Data, а если его нет (прокси/WebView могли убрать заголовок) — в теле запроса, поле _init
+    let input = {};
+    let bodyText = '';
+    try { bodyText = await readBody(req, 262144); input = bodyText ? JSON.parse(bodyText) : {}; }
+    catch (e) { return e.message === 'too large' ? json(res, 413, { ok: false, description: 'Слишком большой запрос' }) : json(res, 400, { ok: false, description: 'Bad request' }); }
+    const rawInit = req.headers['x-init-data'] || (typeof input._init === 'string' ? input._init : undefined);
+    delete input._init;
     const auth = validateInitData(rawInit, token);
     if (!auth) {
       // диагностика: почему не прошла проверка подписи (сам токен и initData в лог не пишем)
@@ -50,9 +56,6 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
     const fn = await loadEndpoint(name);
     if (!fn) return json(res, 404, { ok: false, description: 'Not found' });
     if (limited(auth.user.id)) return json(res, 429, { ok: false, description: 'Слишком много запросов, подождите минуту', parameters: { code: 'RATE' } });
-    let input = {};
-    try { const b = await readBody(req, 262144); input = b ? JSON.parse(b) : {}; }
-    catch (e) { return e.message === 'too large' ? json(res, 413, { ok: false, description: 'Слишком большой запрос' }) : json(res, 400, { ok: false, description: 'Bad request' }); }
     try {
       const result = await fn(input, { initData: auth });
       return json(res, 200, { ok: true, result: result === undefined ? null : result });
