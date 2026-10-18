@@ -38,8 +38,15 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
   });
 
   async function callEndpoint(req, res, name) {
-    const auth = validateInitData(req.headers['x-init-data'], token);
-    if (!auth) return json(res, 401, { ok: false, description: 'Откройте мини-апп из Telegram', parameters: { code: 'AUTH' } });
+    const rawInit = req.headers['x-init-data'];
+    const auth = validateInitData(rawInit, token);
+    if (!auth) {
+      // диагностика: почему не прошла проверка подписи (сам токен и initData в лог не пишем)
+      const hasHash = !!rawInit && /(^|&)hash=/.test(String(rawInit));
+      const ad = rawInit ? Number(new URLSearchParams(String(rawInit)).get('auth_date')) : 0;
+      const age = ad ? Math.round(Date.now() / 1000 - ad) : null;
+      log('warn', `AUTH ${name}: initData отклонён — заголовок ${rawInit ? 'есть (' + String(rawInit).length + ' симв.)' : 'ОТСУТСТВУЕТ'}, hash ${hasHash ? 'есть' : 'нет'}, возраст auth_date ${age ?? '—'} c, bot_id=${String(token).split(':')[0]}`);
+      return json(res, 401, { ok: false, description: 'Откройте мини-апп из Telegram', parameters: { code: 'AUTH' } }); }
     const fn = await loadEndpoint(name);
     if (!fn) return json(res, 404, { ok: false, description: 'Not found' });
     if (limited(auth.user.id)) return json(res, 429, { ok: false, description: 'Слишком много запросов, подождите минуту', parameters: { code: 'RATE' } });
