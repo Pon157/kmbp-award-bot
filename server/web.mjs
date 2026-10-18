@@ -28,7 +28,7 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
 
   const json = (res, code, obj) => {
     const b = JSON.stringify(obj);
-    res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(b), 'cache-control': 'no-store' }); res.end(b);
+    res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(b), 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(b);
   };
   const readBody = (req, max) => new Promise((resolve, reject) => {
     let n = 0; const ch = [];
@@ -70,17 +70,50 @@ export function createWebServer({ appDir, endpointsDir, token, rateLimit = 240, 
     }
   }
 
+
+  // ── Защита статики ──────────────────────────────────────────────────────
+  // Скрипты/стили/картинки отдаём только когда их подтягивает сама страница мини-аппа.
+  // Если ресурс открыт напрямую (адресная строка браузера, ссылка в чате) — 403 Forbidden.
+  // Важно: это не «шифрование» кода. JS всё равно выполняется в браузере, и тот, кто умеет curl/DevTools, его увидит.
+  // Настоящая защита — на сервере: проверка подписи initData для каждого /api-запроса (уже сделано).
+  const PAGE_EXT = new Set(['.html', '']);
+  const SEC_HEADERS = {
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'no-referrer',
+    'x-robots-tag': 'noindex, nofollow',
+    'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+    // Telegram Web (web.telegram.org) открывает мини-апп во фрейме — поэтому frame-ancestors, а не X-Frame-Options: DENY
+    'content-security-policy': "frame-ancestors 'self' https://web.telegram.org https://webk.telegram.org https://webz.telegram.org https://telegram.org; object-src 'none'; base-uri 'self'",
+  };
+  const forbidden = (res) => {
+    res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', ...SEC_HEADERS });
+    res.end('403 Forbidden');
+  };
+  function isDirectOpen(req, ext) {
+    if (PAGE_EXT.has(ext)) return false;                         // саму страницу Telegram открывает как документ — её не блокируем
+    const h = req.headers;
+    const dest = h['sec-fetch-dest'], mode = h['sec-fetch-mode'], user = h['sec-fetch-user'];
+    if (dest === 'document' || dest === 'iframe' || dest === 'frame' || mode === 'navigate' || user === '?1') return true;
+    // Старые браузеры без Sec-Fetch-*: адресная строка шлёт Accept: text/html..., а <script>/<link>/<img> — */* или image/*
+    if (!dest && /^text\/html/i.test(String(h.accept || ''))) return true;
+    return false;
+  }
+
   function serveStatic(req, res, pathname) {
     let rel; try { rel = decodeURIComponent(pathname); } catch (e) { res.writeHead(400); return res.end('Bad request'); }
     if (rel.includes('\0')) { res.writeHead(400); return res.end('Bad request'); }
     if (rel.endsWith('/')) rel += 'index.html';
+    // dotfiles, source maps, служебные файлы — никогда
+    if (/(^|\/)\.|\.map$|\.(env|bak|sqlite|db|log|md|json|mjs)$/i.test(rel)) return forbidden(res);
+    const ext = path.extname(rel).toLowerCase();
+    if (isDirectOpen(req, ext)) return forbidden(res);
     const file = path.normalize(path.join(appDir, rel));
     if (file !== appDir && !file.startsWith(appDir + path.sep)) { res.writeHead(404); return res.end('Not found'); }
     fs.stat(file, (err, st) => {
-      if (err || !st.isFile()) { res.writeHead(404); return res.end('Not found'); }
+      if (err || !st.isFile()) { res.writeHead(404, SEC_HEADERS); return res.end('Not found'); }
       const etag = `"${st.size}-${Math.floor(st.mtimeMs)}"`;
       if (req.headers['if-none-match'] === etag) { res.writeHead(304, { etag }); return res.end(); }
-      res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'content-length': st.size, etag, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+      res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'content-length': st.size, etag, 'cache-control': 'no-cache', ...SEC_HEADERS });
       if (req.method === 'HEAD') return res.end();
       fs.createReadStream(file).pipe(res);
     });
