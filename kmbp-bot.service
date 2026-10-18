@@ -1,0 +1,19 @@
+# systemd: положите в /etc/systemd/system/kmbp-bot.service, поправьте пути и пользователя, затем:
+#   systemctl daemon-reload && systemctl enable --now kmbp-bot && journalctl -u kmbp-bot -f
+[Unit]
+Description=KMBP award bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kmbp
+WorkingDirectory=/opt/kmbp
+EnvironmentFile=/opt/kmbp/.env
+ExecStart=/usr/bin/node --no-warnings --import ./server/register.mjs server/index.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

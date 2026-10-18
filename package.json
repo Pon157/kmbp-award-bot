@@ -1,0 +1,24 @@
+{
+  "name": "kmbp-award-bot",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "migrate": "tgcloud migrate",
+    "start": "node --no-warnings --import ./server/register.mjs server/index.mjs",
+    "restore": "node --no-warnings --import ./server/register.mjs server/cli.mjs restore",
+    "export": "node --no-warnings --import ./server/register.mjs server/cli.mjs export"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "type": "module",
+  "dependencies": {
+    "undici": "^7.0.0",
+    "fetch-socks": "^1.3.0"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
