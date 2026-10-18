@@ -68,7 +68,9 @@
   function call(name, input) {
     return new Promise(function (resolve, reject) {
       if (!IN_TG) return reject(new Error('Откройте мини-апп в Telegram'));
-      if (tg.Serverless) return tg.Serverless.call(name, input || {}, function (err, data) { err ? reject(err) : resolve(data); });
+      // Свой сервер: платформенный tg.Serverless здесь не используем — его запрос не несёт наш X-Init-Data.
+      // (Оставьте ветку только если мини-апп хостится на платформе Telegram.)
+      if (window.KMBP_USE_PLATFORM && tg.Serverless) return tg.Serverless.call(name, input || {}, function (err, data) { err ? reject(err) : resolve(data); });
       // свой сервер: подпись Telegram (initData) идёт в заголовке, сервер её проверяет
       fetch(API_BASE + '/api/' + name, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Init-Data': tg.initData }, body: JSON.stringify(Object.assign({}, input || {}, { _init: tg.initData })) })
         .then(function (r) { return r.json().catch(function () { return { ok: false, description: 'Сервер вернул не JSON (HTTP ' + r.status + ')' }; }); })
