@@ -1,0 +1,18 @@
+# секреты — никогда не коммитим
+.env
+*.env.local
+
+# зависимости и сборка
+node_modules/
+
+# данные и выгрузки бота
+data/
+*.sqlite
+*.sqlite-journal
+*.db
+*.log
+
+# служебное
+.DS_Store
+.idea/
+.vscode/

@@ -8,7 +8,9 @@
     "migrate": "tgcloud migrate",
     "start": "node --no-warnings --import ./server/register.mjs server/index.mjs",
     "restore": "node --no-warnings --import ./server/register.mjs server/cli.mjs restore",
-    "export": "node --no-warnings --import ./server/register.mjs server/cli.mjs export"
+    "export": "node --no-warnings --import ./server/register.mjs server/cli.mjs export",
+    "test": "cd test && node --no-warnings --import ./register.mjs run.mjs && node --no-warnings --import ./register.mjs r2.mjs",
+    "test:e2e": "bash test/e2e/run.sh"
   },
   "devDependencies": {
     "@tgcloud/cli": "^0.2.0"

@@ -1,0 +1,23 @@
+import sys, time; import os; sys.path.insert(0, os.path.dirname(__file__))
+from uilib import *
+from playwright.sync_api import sync_playwright
+def shot(pg,n,full=False): pg.screenshot(path=f'/tmp/kmbp-shots/{n}.png', full_page=full)
+with sync_playwright() as p:
+    b=p.chromium.launch()
+    ctx,pg=tgpage(b,2004)
+    pg.goto(BASE+'/'); pg.wait_for_selector('.hero')
+    shot(pg,'10_home',True)
+    pg.click('text=Начать голосовать'); pg.wait_for_selector('.pcard'); pg.wait_for_timeout(3400)
+    pg.locator('.pcard').nth(0).get_by_text('Проголосовать').click()
+    pg.wait_for_selector('.sheet'); shot(pg,'11_confirm')
+    pg.click('.sheet__actions .btn--gold')
+    pg.wait_for_selector('.captcha img', timeout=5000); pg.wait_for_timeout(300); shot(pg,'12_captcha')
+    code=get('/__test/lastcaptcha'); print('code',code)
+    pg.fill('.sheet input', code); pg.click('.sheet .btn--gold')
+    pg.wait_for_selector('.is-mine', timeout=6000); pg.wait_for_timeout(500); shot(pg,'13_voted')
+    print('toast:', pg.locator('.toast').all_inner_texts())
+    pg.click('.vnav .btn--gold'); pg.wait_for_selector('.cards'); pg.wait_for_timeout(700)
+    print('nom2 title:', pg.locator('h1').inner_text(), 'cards', pg.locator('.pcard').count())
+    shot(pg,'14_nom2')
+    print(errors)
+    b.close()

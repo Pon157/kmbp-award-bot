@@ -5,6 +5,7 @@ import { maybeBackup } from '../lib/backup.js';
 import { runReminders, setMuted } from '../lib/reminders.js';
 import { refScreen } from '../lib/referrals.js';
 import { D } from '../lib/doc.js';
+import { botCallback } from '../lib/weblogin.js';
 import { toast, safe, errText, show, B } from '../lib/tg.js';
 
 export default async function (cq) {
@@ -27,6 +28,8 @@ export default async function (cq) {
       await adminCb(c, data);
       return await toast(cq.id);
     }
+
+    if (data.startsWith('lg:') && c.private) return await toast(cq.id, await botCallback(from, msg.chat.id, msg.message_id, data));   // подтверждение входа на сайт
 
     if (c.private) await S.touchUser(from);
     if (await S.isBanned(from.id, 'bot')) { await toast(cq.id); return await bannedScreen(c); }

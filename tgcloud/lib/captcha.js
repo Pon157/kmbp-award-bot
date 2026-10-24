@@ -7,7 +7,8 @@ const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // без похожих: 0/
 const LEN = 5;
 const TTL_MS = 10 * 60 * 1000;
 
-const rnd = (n) => Math.floor(Math.random() * n);
+// Криптографический генератор, если он есть (на своём сервере есть всегда), иначе Math.random.
+const rnd = (n) => { const c = globalThis.crypto; if (!c?.getRandomValues) return Math.floor(Math.random() * n); const a = new Uint32Array(1); c.getRandomValues(a); return a[0] % n; };
 const pick = (s) => s[rnd(s.length)];
 
 function svgFor(code) {
@@ -35,7 +36,7 @@ function svgFor(code) {
 export async function makeCaptcha() {
   let code = '';
   for (let i = 0; i < LEN; i++) code += pick(ALPHABET);
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  let id = Date.now().toString(36); for (let i = 0; i < 12; i++) id += ALPHABET.toLowerCase()[rnd(ALPHABET.length)];
   await S.setSetting('captcha:' + id, code + '|' + (Date.now() + TTL_MS));
   return { id, src: svgFor(code) };
 }

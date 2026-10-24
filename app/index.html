@@ -2,40 +2,47 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0d1024">
-  <title>Премия года КМБП</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0e20">
+  <meta name="color-scheme" content="dark">
+  <title>Премия года КМБП · 2 тур</title>
   <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Иконки: свой набор, без эмодзи -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Иконки: свой набор. Никаких inline-стилей и скриптов — работает строгая политика безопасности (CSP). -->
+  <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
-      <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3.2"/><path d="M12 8V5.2"/><circle cx="12" cy="4" r="1.2"/><path d="M2 12.5v3M22 12.5v3"/><circle cx="9" cy="13.6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13.6" r="1" fill="currentColor" stroke="none"/></symbol>
-      <symbol id="i-project" viewBox="0 0 24 24"><path d="M12 3.2l8.6 4.6L12 12.4 3.4 7.8 12 3.2z"/><path d="M3.4 12.2L12 16.8l8.6-4.6"/><path d="M3.4 16.4L12 21l8.6-4.6"/></symbol>
-      <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20c0-3.8 3.1-6.2 7.2-6.2s7.2 2.4 7.2 6.2"/></symbol>
-      <symbol id="i-event" viewBox="0 0 24 24"><rect x="3.8" y="5" width="16.4" height="15.2" rx="2.4"/><path d="M3.8 10h16.4M8 3v3.6M16 3v3.6"/><path d="M12 12.6l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.8l4.4 4.4L19 7.6"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
       <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
-      <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
-      <symbol id="i-channel" viewBox="0 0 24 24"><path d="M4 9.8v4.4l11.6 4.6V5.2L4 9.8z"/><path d="M15.6 9.2c2 .6 3.2 1.7 3.2 2.8s-1.2 2.2-3.2 2.8M7.4 15.4l1 4.2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/></symbol>
+      <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v9.2M9.4 9.6c.4-1 1.3-1.4 2.6-1.4 1.6 0 2.6.7 2.6 1.8 0 2.6-5.4 1.2-5.4 3.8 0 1.1 1 1.8 2.8 1.8 1.3 0 2.2-.4 2.6-1.4"/></symbol>
+      <symbol id="i-brush" viewBox="0 0 24 24"><path d="M14.5 4.5l5 5-8.2 8.2-4.6.6.6-4.6z"/><path d="M13 6l5 5M6.4 18.4c-.2 1.6-1.4 2.2-2.8 2.2 1.2-.8 1.2-1.8 1.4-3"/></symbol>
       <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 4.8h14a1 1 0 0 1 1 1v9.2a1 1 0 0 1-1 1h-8l-5 3.8V16H5a1 1 0 0 1-1-1V5.8a1 1 0 0 1 1-1z"/></symbol>
-      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2M12 3.4c3.2 3.2 3.2 14 0 17.2M12 3.4c-3.2 3.2-3.2 14 0 17.2"/></symbol>
-      <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7.6L3.6 12 8 16.4M16 7.6l4.4 4.4-4.4 4.4M13.6 5.6l-3.2 12.8"/></symbol>
-      <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12.2a.8.8 0 0 1-.8.8H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 16.6h6"/></symbol>
-      <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="12" rx="2.4"/><path d="M17 10.4l4-2.4v8l-4-2.4"/></symbol>
-      <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 1.5c.7 5.6 2.9 7.8 8.5 8.5-5.6.7-7.8 2.9-8.5 8.5-.7-5.6-2.9-7.8-8.5-8.5 5.6-.7 7.8-2.9 8.5-8.5z" fill="currentColor" stroke="none"/></symbol>
-      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 5.6 3 3.4H7l3-3.4L9 4zM12 13v7"/></symbol>
-      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19.4 8.6l-4-4L4 16v4zM13.4 6.4l4 4"/></symbol>
-      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.4" rx="2.2"/><path d="M8 11V8.2a4 4 0 0 1 8 0V11"/></symbol>
-      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.6v5.4M12 16.2v.2"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.4l7 2.8v5.4c0 4.4-2.8 7.6-7 9-4.2-1.4-7-4.6-7-9V6.2z"/><path d="M9 12l2.2 2.2L15.4 10"/></symbol>
+      <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4.8h4.4a1 1 0 0 1 1 1v12.4a1 1 0 0 1-1 1H14M10 8l-4 4 4 4M6 12h9"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4.6 11.4 9 15.8M5 11.4h9.4a5 5 0 0 1 0 10H11"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.8 7h14.4M9.4 7V4.6h5.2V7M7 7l.8 12.4h8.4L17 7"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 10l6 6 6-6"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M5 19l.8-3.8L16.6 4.4l3 3L8.8 18.2z"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 20V4.6M6 5h11l-2 3.6 2 3.6H6"/></symbol>
+      <symbol id="i-reply" viewBox="0 0 24 24"><path d="M10 6L4.6 11.4 10 16.8M5 11.4h8.4a6 6 0 0 1 6 6V19"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-7-6 15-2.6-6.2z"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.4" y="10.6" width="13.2" height="9.4" rx="2"/><path d="M8.4 10.6V8a3.6 3.6 0 0 1 7.2 0v2.6"/></symbol>
+      <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12S6.2 6 12 6s9.2 6 9.2 6-3.4 6-9.2 6S2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.6"/></symbol>
     </defs>
   </svg>
-
-  <div id="app" aria-live="polite"></div>
-  <script defer src="fx.js?v=3"></script>
-  <script defer src="app.js?v=4"></script>
+  <div id="app" class="app"></div>
+  <div id="layer"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <noscript><p class="noscript">Для работы сайта нужен JavaScript.</p></noscript>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

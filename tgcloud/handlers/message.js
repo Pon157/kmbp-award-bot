@@ -8,6 +8,7 @@ import { parseRefParam, attachReferral, refScreen } from '../lib/referrals.js';
 import { send, safe } from '../lib/tg.js';
 import { D } from '../lib/doc.js';
 import { em } from '../lib/emoji.js';
+import { botStart } from '../lib/weblogin.js';
 
 export default async function (message) {
   const from = message.from;
@@ -36,6 +37,7 @@ export default async function (message) {
   try {
     if (await S.isBanned(from.id, 'bot')) return await bannedScreen(c);
 
+    if (cmd === 'start' && /^login_[A-Za-z0-9_-]{10,40}$/.test(m[2] || '')) { await S.clearState(from.id); return await botStart(from, chat.id, m[2].slice(6)); }   // вход на сайт
     if (cmd === 'cancel') { await S.clearState(from.id); return await homeScreen(c); }
     if (cmd === 'invite') { await S.clearState(from.id); return await refScreen(c); }
     if (cmd === 'admin' && owner) { await S.clearState(from.id); return await adminHome(c); }

@@ -52,9 +52,12 @@ const runner = createUpdateRunner({ handlersDir: path.join(ROOT, 'tgcloud', 'han
 const mode = (env.UPDATES || 'polling').toLowerCase();
 const secret = createHash('sha256').update('kmbp-webhook:' + env.BOT_TOKEN).digest('hex').slice(0, 32);
 
+const { makeHooks } = await import('./r2hooks.mjs');
 const server = createWebServer({
   appDir: env.APP_DIR || path.join(ROOT, 'app'), endpointsDir: path.join(ROOT, 'tgcloud', 'endpoints'), token: env.BOT_TOKEN,
-  rateLimit: Number(env.API_RATE_PER_MIN) || 240, log,
+  rateLimit: Number(env.API_RATE_PER_MIN) || 240, log, hooks: await makeHooks(),
+  trustProxy: env.TRUST_PROXY === '1',                       // 1 — если перед ботом стоит Caddy/nginx (адрес клиента берётся из X-Forwarded-For)
+  secure: /^https:/i.test(env.APP_URL || ''),                // cookie сессии с флагом Secure, заголовок HSTS
   webhook: mode === 'webhook' ? { secret, onUpdate: (u) => runner.handle(u) } : null,
 });
 const port = Number(env.PORT) || 3000, host = env.HOST || '0.0.0.0';
@@ -80,6 +83,8 @@ const every = (ms, name, fn) => setInterval(() => { Promise.resolve().then(fn).c
 every(60 * 1000, 'напоминания', () => runReminders());
 every(10 * 60 * 1000, 'бэкап', () => maybeBackup());
 every(60 * 60 * 1000, 'капча', () => purgeCaptcha());
+const { purgeLogins } = await import('../tgcloud/lib/weblogin.js');
+every(60 * 60 * 1000, 'сессии', () => purgeLogins());
 
 let closing = false;
 async function shutdown(sig) {

@@ -6,13 +6,15 @@ import { BACKUP_EVERY } from './config.js';
 import { now, utf8, fmtDate } from './util.js';
 import { isForbidden, errText } from './tg.js';
 
-export const TABLES = ['users', 'owners', 'bans', 'nominations', 'questions', 'applications', 'news', 'links', 'settings', 'broadcasts', 'sponsors', 'sponsor_banners', 'referrals', 'coin_log', 'reminders'];
+export const TABLES = ['users', 'owners', 'bans', 'nominations', 'questions', 'applications', 'news', 'links', 'settings', 'broadcasts', 'sponsors', 'sponsor_banners', 'referrals', 'coin_log', 'reminders',
+  'r2_access', 'r2_projects', 'r2_votes', 'r2_vote_log', 'r2_drawings', 'r2_topics', 'r2_posts', 'r2_reports', 'r2_mutes'];
 
 export async function snapshot() {
   const tables = {};
   for (const t of TABLES) {
     // Изображения большие — в выгрузку не кладём (их можно загрузить заново).
     if (t === 'settings') tables[t] = await all("SELECT * FROM settings WHERE key <> 'banner_site_data' AND key NOT LIKE 'captcha:%'");
+    else if (t === 'r2_projects') { try { tables[t] = await all('SELECT id, nomination_id, title, description, banner_ver, editors_choice, active, position, created_at, updated_at FROM r2_projects'); } catch (e) { /* до migrate */ } }
     else if (t === 'sponsor_banners') tables[t] = await all('SELECT id, title, target_url, active, position, created_at FROM sponsor_banners');
     else { try { tables[t] = await all(`SELECT * FROM ${t}`); } catch (e) { /* таблицы ещё нет (до migrate) — пропускаем */ } }
   }

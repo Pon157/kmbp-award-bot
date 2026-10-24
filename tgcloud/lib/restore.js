@@ -90,6 +90,7 @@ export async function restoreJson(parsed, { mode = 'replace', keepOwner = null }
           const k = String(row.key);
           if (k.startsWith('captcha:') || k === 'bot_username' || k === 'seeded' && mode === 'merge' || (k === 'app_url' && envApp)) { skip++; continue; }
         }
+        if (t === 'r2_projects') row.banner_ver = 0;                  // картинок карточек в выгрузке нет — загрузите заново
         if (t === 'sponsor_banners' && !row.image_data) { row.image_data = ''; row.active = 0; }   // картинок в выгрузке нет — загрузите заново
         const keys = Object.keys(row).filter((k) => cols.has(k));
         if (!keys.length) { skip++; continue; }

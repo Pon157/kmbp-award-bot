@@ -181,3 +181,157 @@ export const referrals = table('referrals', {
 }, (t) => ({
   byReferrer: index('idx_ref_referrer').on(t.referrerId),
 }));
+
+// ═════════════════════════ 2 ТУР ═════════════════════════
+
+// Кому разрешён 2 тур (пока доступ ограничен списком Telegram ID; список ведёт владелец в админке мини-аппа).
+export const r2Access = table('r2_access', {
+  userId:  integer('user_id').primaryKey(),
+  addedBy: integer('added_by'),
+  addedAt: integer('added_at').notNull().default(0),
+  note:    text('note'),
+});
+
+// Карточки проектов для голосования (внутри номинации).
+export const r2Projects = table('r2_projects', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
+  nominationId: integer('nomination_id').notNull(),
+  title:        text('title').notNull(),
+  description:  text('description').notNull().default(''),
+  bannerData:   text('banner_data'),                         // base64 JPEG (клиент пережимает перед загрузкой)
+  bannerVer:    integer('banner_ver').notNull().default(0),  // меняется при замене картинки — часть подписанной ссылки
+  editorsChoice: boolean('editors_choice').notNull().default(false),
+  active:       boolean('active').notNull().default(true),
+  position:     integer('position').notNull().default(0),
+  createdAt:    integer('created_at').notNull().default(0),
+  updatedAt:    integer('updated_at').notNull().default(0),
+}, (t) => ({
+  nomIdx: index('idx_r2p_nom').on(t.nominationId),
+}));
+
+// Голоса. kind: main (вес 1) | extra (вес 0,5, за монеты). Хранится в «половинках»: weight2 = 2 или 1.
+// excluded — голос исключён админом из подсчёта (накрутка). Один основной голос на человека в номинации — уникальный индекс.
+export const r2Votes = table('r2_votes', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
+  userId:       integer('user_id').notNull(),
+  nominationId: integer('nomination_id').notNull(),
+  projectId:    integer('project_id').notNull(),
+  kind:         text('kind').notNull().default('main'),
+  weight2:      integer('weight2').notNull().default(2),
+  changes:      integer('changes').notNull().default(0),     // сколько раз основной голос меняли
+  excluded:     boolean('excluded').notNull().default(false),
+  exclReason:   text('excl_reason'),
+  ipHash:       text('ip_hash'),
+  netHash:      text('net_hash'),
+  uaHash:       text('ua_hash'),
+  via:          text('via'),                                  // tg (initData) | web (сессия браузера)
+  createdAt:    integer('created_at').notNull().default(0),
+  updatedAt:    integer('updated_at').notNull().default(0),
+}, (t) => ({
+  uq:      uniqueIndex('uq_r2v_user_nom_kind').on(t.userId, t.nominationId, t.kind),
+  byProj:  index('idx_r2v_proj').on(t.projectId),
+  byNet:   index('idx_r2v_net').on(t.netHash),
+}));
+
+// Журнал действий с голосами — для разбора накруток. Только добавляется.
+export const r2VoteLog = table('r2_vote_log', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
+  userId:       integer('user_id').notNull(),
+  nominationId: integer('nomination_id').notNull(),
+  projectId:    integer('project_id').notNull(),
+  action:       text('action').notNull(),                     // vote | change | extra | denied:<причина>
+  ipHash:       text('ip_hash'),
+  uaHash:       text('ua_hash'),
+  at:           integer('at').notNull().default(0),
+}, (t) => ({
+  byUser: index('idx_r2vl_user').on(t.userId),
+}));
+
+// Прошёл ли человек проверку «я не бот» (капча) — действует ограниченное время.
+export const r2Human = table('r2_human', {
+  userId: integer('user_id').primaryKey(),
+  until:  integer('until').notNull().default(0),
+});
+
+// Рисунки зрителей: штрихи (не картинки!) — загрузить произвольное изображение нельзя. Один рисунок на человека в номинации.
+export const r2Drawings = table('r2_drawings', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
+  userId:       integer('user_id').notNull(),
+  nominationId: integer('nomination_id').notNull(),
+  projectId:    integer('project_id').notNull(),
+  strokes:      text('strokes').notNull(),                    // JSON, формат — lib/draw.js
+  createdAt:    integer('created_at').notNull().default(0),
+  updatedAt:    integer('updated_at').notNull().default(0),
+}, (t) => ({
+  uq:     uniqueIndex('uq_r2d_user_nom').on(t.userId, t.nominationId),
+  byProj: index('idx_r2d_proj').on(t.projectId),
+}));
+
+// Форум.
+export const r2Topics = table('r2_topics', {
+  id:       integer('id').primaryKey({ autoIncrement: true }),
+  title:    text('title').notNull(),
+  descr:    text('descr').notNull().default(''),
+  locked:   boolean('locked').notNull().default(false),
+  pinned:   boolean('pinned').notNull().default(false),
+  active:   boolean('active').notNull().default(true),
+  position: integer('position').notNull().default(0),
+  createdAt: integer('created_at').notNull().default(0),
+});
+export const r2Posts = table('r2_posts', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  topicId:   integer('topic_id').notNull(),
+  userId:    integer('user_id').notNull(),
+  name:      text('name').notNull().default(''),
+  isStaff:   boolean('is_staff').notNull().default(false),
+  body:      text('body').notNull(),
+  norm:      text('norm').notNull().default(''),              // нормализованный текст — для поиска дублей
+  replyTo:   integer('reply_to'),
+  hidden:    boolean('hidden').notNull().default(false),      // скрыто модератором / жалобами
+  reports:   integer('reports').notNull().default(0),
+  createdAt: integer('created_at').notNull().default(0),
+}, (t) => ({
+  byTopic: index('idx_r2post_topic').on(t.topicId, t.id),
+  byUser:  index('idx_r2post_user').on(t.userId, t.createdAt),
+  byNorm:  index('idx_r2post_norm').on(t.norm),
+}));
+export const r2Reports = table('r2_reports', {
+  postId:    integer('post_id').notNull(),
+  userId:    integer('user_id').notNull(),
+  createdAt: integer('created_at').notNull().default(0),
+}, (t) => ({
+  uq: uniqueIndex('uq_r2rep').on(t.postId, t.userId),
+}));
+// Мьюты на форуме (until — unixtime; 0 = навсегда). strikes — сколько раз автоматически наказан.
+export const r2Mutes = table('r2_mutes', {
+  userId:  integer('user_id').primaryKey(),
+  until:   integer('until').notNull().default(0),
+  reason:  text('reason'),
+  strikes: integer('strikes').notNull().default(0),
+  at:      integer('at').notNull().default(0),
+});
+
+// Вход в браузере через Telegram: одноразовая заявка на вход (подтверждается в боте) и сессии.
+export const webLogins = table('web_logins', {
+  id:        text('id').primaryKey(),                         // sha256(nonce из ссылки)
+  pollHash:  text('poll_hash').notNull(),                     // sha256(секрет браузера) — без него сессию не получить
+  code:      text('code').notNull(),                          // число, которое видно на сайте и которое надо выбрать в боте
+  status:    text('status').notNull().default('pending'),     // pending | confirmed | denied | used | failed
+  userId:    integer('user_id'),
+  ipHash:    text('ip_hash'),
+  uaLabel:   text('ua_label'),
+  attempts:  integer('attempts').notNull().default(0),
+  createdAt: integer('created_at').notNull().default(0),
+  expiresAt: integer('expires_at').notNull().default(0),
+});
+export const webSessions = table('web_sessions', {
+  id:        text('id').primaryKey(),                         // sha256(токен из cookie)
+  userId:    integer('user_id').notNull(),
+  ipHash:    text('ip_hash'),
+  uaHash:    text('ua_hash'),
+  createdAt: integer('created_at').notNull().default(0),
+  lastAt:    integer('last_at').notNull().default(0),
+  expiresAt: integer('expires_at').notNull().default(0),
+}, (t) => ({
+  byUser: index('idx_ws_user').on(t.userId),
+}));
